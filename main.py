@@ -3,18 +3,31 @@
 ouo.io 24/7 Multi-Worker Earning Automation Engine & Telegram Control Center
 Created with love by RJN (ROX AI) for Rudra.
 
-Features:
-- Unified Single File Architecture (.py) for Cloud & Railway Deployment
-- 45 Parallel Browser Workers (Multi-Worker Concurrency with Natural Pacing)
-- Dedicated US-Only Rotating Residential Proxy (res-us-rotate) for Highest Tier-1 eCPM
-- Built-in Telegram Bot Control Panel (@Roxyubot) with Master Password Protection
-- Dynamic Link Generation via Vercel Portal
-- Hourly Dashboard Scraper & Thread-Safe Stats Storage
-- Automatic Lightweight HTTP Healthcheck for Railway Deployments
+Universal Multi-Platform Deployment Ready:
+- Works seamlessly on Railway, Render, Koyeb, Fly.io, Heroku, Docker, VPS, and Local Linux.
+- Automatic Port Binding (Render/Koyeb/Railway/Fly.io $PORT auto-detection).
+- 45 Concurrent Playwright Browser Workers with Natural Dynamic Pacing.
+- US-Only Rotating Residential Proxy for Tier-1 eCPM Monetization.
+- Embedded Telegram Bot (@Roxyubot) with Master Security Gatekeeper.
+- Hourly Dashboard Scraping with Local Cache.
 """
 
 import os
 import sys
+
+# Auto-configure LD_LIBRARY_PATH for local/custom environments if shared libraries exist
+custom_lib_base = os.path.expanduser("~/.local/shared_libs")
+if os.path.exists(custom_lib_base):
+    extra_libs = []
+    for root, dirs, files in os.walk(custom_lib_base):
+        for f in files:
+            if ".so" in f:
+                extra_libs.append(root)
+                break
+    if extra_libs:
+        current_ld = os.environ.get("LD_LIBRARY_PATH", "")
+        os.environ["LD_LIBRARY_PATH"] = ":".join(sorted(list(set(extra_libs)))) + ((":" + current_ld) if current_ld else "")
+
 import time
 import json
 import random
@@ -34,7 +47,7 @@ from telebot.apihelper import ApiTelegramException
 # Playwright Browser Automation
 from playwright.sync_api import sync_playwright
 
-# Force unbuffered output for live logging on Railway
+# Force unbuffered output for live logging on cloud platforms
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
@@ -48,7 +61,7 @@ AUTH_FILE = os.path.join(DATA_DIR, "bot_auth.json")
 SESSION_FILE = os.path.join(DATA_DIR, "ouo_session.json")
 
 # Telegram Bot Config
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8943552749:AAFZz5LnHyucisObGpJ2Nx35Ul-f1bTa6BQ")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8943552749:AAEFLy_ggahJLTEM-00zQfiUJVOvKml4sA4")
 bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
 SESSION_LIFETIME = 86400  # 24 Hours in seconds for user authentication
 
@@ -221,7 +234,7 @@ def check_session_validity():
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=['--no-sandbox', '--disable-blink-features=AutomationControlled']
+                args=['--no-sandbox', '--disable-gpu', '--disable-blink-features=AutomationControlled']
             )
             context = browser.new_context(proxy=PROXY_CONFIG, user_agent=USER_AGENT)
             with open(SESSION_FILE) as f:
@@ -248,7 +261,7 @@ def do_login():
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=['--no-sandbox', '--disable-blink-features=AutomationControlled', '--disable-infobars']
+                args=['--no-sandbox', '--disable-gpu', '--disable-blink-features=AutomationControlled', '--disable-infobars']
             )
             context = browser.new_context(
                 proxy=PROXY_CONFIG,
@@ -313,7 +326,7 @@ def check_ouo_dashboard_hourly(force=False):
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=['--no-sandbox', '--disable-blink-features=AutomationControlled']
+                args=['--no-sandbox', '--disable-gpu', '--disable-blink-features=AutomationControlled']
             )
             context = browser.new_context(
                 proxy=PROXY_CONFIG,
@@ -377,7 +390,7 @@ def shorten_target(target_url):
             with sync_playwright() as p:
                 browser = p.chromium.launch(
                     headless=True,
-                    args=['--no-sandbox', '--disable-blink-features=AutomationControlled']
+                    args=['--no-sandbox', '--disable-gpu', '--disable-blink-features=AutomationControlled']
                 )
                 context = browser.new_context(
                     proxy=PROXY_CONFIG,
@@ -439,7 +452,7 @@ def visit_shortlink(short_url, worker_id=1):
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=['--no-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized']
+                args=['--no-sandbox', '--disable-gpu', '--disable-blink-features=AutomationControlled', '--start-maximized']
             )
             context = browser.new_context(
                 proxy=VISITOR_PROXY_CONFIG,
@@ -549,7 +562,7 @@ def worker_routine(worker_id):
             else:
                 print(f"[Worker #{worker_id:02d}] ⚠️ View ended: {dest[:45]}...")
                 
-            # Dynamic natural pacing
+            # Dynamic natural pacing between 3 to 15 seconds
             worker_sleep = random.uniform(3.0, 15.0)
             time.sleep(worker_sleep)
             
@@ -594,7 +607,7 @@ def run_multi_worker_daemon():
         t = threading.Thread(target=worker_routine, args=(w_id,), daemon=True)
         t.start()
         threads.append(t)
-        time.sleep(random.uniform(0.5, 1.8))  # Staggered launch
+        time.sleep(random.uniform(0.6, 1.8))  # Staggered launch
         
     print(f"[+] All {NUM_WORKERS} Workers successfully launched! Running 24/7.")
 
@@ -832,14 +845,11 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id, msg)
         send_or_update_status_card(chat_id, edit_msg_id=call.message.message_id)
 
-# ----------------- RAILWAY HEALTH SERVER -----------------
+# ----------------- MULTI-PLATFORM CLOUD HEALTH SERVER -----------------
 
 def run_health_server():
-    """Lightweight HTTP server on $PORT for Railway Web Service health checks"""
-    port_str = os.environ.get("PORT")
-    if not port_str:
-        return
-        
+    """Universal HTTP healthcheck endpoint on 0.0.0.0:$PORT for Render, Koyeb, Railway, Fly.io, etc."""
+    port_str = os.environ.get("PORT", "8080")
     try:
         port = int(port_str)
         class HealthHandler(BaseHTTPRequestHandler):
@@ -850,7 +860,8 @@ def run_health_server():
                 resp = json.dumps({
                     "status": "online",
                     "workers": NUM_WORKERS,
-                    "service": "ouo-24-7-engine",
+                    "service": "ouo-earning-bot",
+                    "bot": "@Roxyubot",
                     "time": get_current_time_str()
                 })
                 self.wfile.write(resp.encode('utf-8'))
@@ -859,10 +870,10 @@ def run_health_server():
                 pass  # Suppress health check access logs
                 
         server = HTTPServer(("0.0.0.0", port), HealthHandler)
-        print(f"[*] Railway HTTP Health Server active on port {port}")
+        print(f"[*] Cloud HTTP Health Server active on 0.0.0.0:{port}")
         server.serve_forever()
     except Exception as e:
-        print(f"[!] Railway Health Server error: {e}")
+        print(f"[!] Cloud Health Server warning (Port {port_str}): {e}")
 
 # ----------------- SIGNAL HANDLING & MAIN RUNNER -----------------
 
@@ -883,9 +894,9 @@ if __name__ == '__main__':
     print("🤖 ROX AI — 24/7 Earning Automation & Telegram Bot")
     print(f"👥 Workers: {NUM_WORKERS} Parallel Playwright Instances")
     print(f"📁 Data Directory: {DATA_DIR}")
-    print("=======================================================\n")
+    print("=======================================================")
     
-    # 1. Start Railway Health Server if PORT is assigned
+    # 1. Start Multi-Platform Cloud Health Server in background thread
     threading.Thread(target=run_health_server, daemon=True).start()
     
     # 2. Launch 24/7 Multi-Worker Engine in background thread

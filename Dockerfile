@@ -12,13 +12,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Chromium and system dependencies for Playwright
+# Install Chromium and all system dependencies for Playwright
 RUN playwright install --with-deps chromium
 
 # Copy application source
 COPY . .
 
 ENV NUM_WORKERS=45
+ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8080
 
 CMD ["python", "main.py"]

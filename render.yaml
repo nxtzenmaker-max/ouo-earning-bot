@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: ouo-earning-bot
+    env: docker
+    plan: standard
+    autoDeploy: true
+    envVars:
+      - key: NUM_WORKERS
+        value: 45
